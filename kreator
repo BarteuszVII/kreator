@@ -1,53 +1,55 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <title>Kreator Etykiety Krówki</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; background: #f8f8f8; margin: 0; padding: 20px; }
-    #canvasWrapper { position: relative; display: inline-block; }
-    canvas { border: 1px solid #ccc; }
+    body { font-family: sans-serif; text-align: center; background: #f0f0f0; padding: 20px; }
+    #canvasWrapper { position: relative; display: inline-block; margin-bottom: 15px; }
+    canvas { border: 1px solid #ccc; background: white; }
     .controls { margin-top: 10px; }
-    input[type="text"] { padding: 5px; margin: 5px; width: 200px; }
+    input[type="text"], textarea { padding: 6px; margin: 5px; width: 300px; font-size: 16px; }
+    textarea { height: 60px; resize: none; }
   </style>
 </head>
 <body>
-  <h1>Kreator etykiety krówki (75×37,5 mm)</h1>
+  <h1>Kreator JPM Krówki</h1>
+
+  <div class="controls">
+    <p><strong>1. Wgraj projekt tła (.jpg/.png):</strong></p>
+    <input type="file" id="backgroundUpload" accept="image/*"><br><br>
+
+    <input type="text" id="namesInput" placeholder="Imiona" />
+    <input type="text" id="dateInput" placeholder="Data" />
+    <input type="file" id="logoUpload" accept="image/*"><br><br>
+
+    <textarea id="noteInput" placeholder="Wiadomość dla sprzedawcy (nie drukowana)"></textarea><br>
+
+    <button onclick="downloadPDF()">Zamawiam z tym projektem (PDF)</button>
+  </div>
 
   <div id="canvasWrapper">
     <canvas id="labelCanvas" width="885" height="443"></canvas>
   </div>
 
-  <div class="controls">
-    <input type="text" id="namesInput" placeholder="Imiona" />
-    <input type="text" id="dateInput" placeholder="Data" />
-    <input type="file" id="logoUpload" />
-    <br />
-    <button onclick="downloadImage()">Zamawiam z tym projektem</button>
-  </div>
-
   <script>
     const canvas = document.getElementById("labelCanvas");
     const ctx = canvas.getContext("2d");
-    const bg = new Image();
-    bg.src = "https://i.imgur.com/2IC3zH5.jpg"; // twoje tło 75x37,5mm w 300DPI
 
+    let backgroundImage = new Image();
     let logo = null;
 
-    bg.onload = () => drawCanvas();
-
-    document.getElementById("namesInput").addEventListener("input", drawCanvas);
-    document.getElementById("dateInput").addEventListener("input", drawCanvas);
-    document.getElementById("logoUpload").addEventListener("change", handleLogoUpload);
-
+    // Rysowanie canvas
     function drawCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      if (backgroundImage.src) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      }
 
       ctx.fillStyle = "#000";
-      ctx.font = "bold 36px Arial";
       ctx.textAlign = "center";
+      ctx.font = "bold 36px Arial";
       ctx.fillText(document.getElementById("namesInput").value, canvas.width / 2, 230);
 
       ctx.font = "28px Arial";
@@ -58,25 +60,68 @@
       }
     }
 
-    function handleLogoUpload(event) {
-      const file = event.target.files[0];
+    // Obsługa wgrywania tła
+    document.getElementById("backgroundUpload").addEventListener("change", (e) => {
+      const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-          logo = new Image();
-          logo.onload = drawCanvas;
-          logo.src = e.target.result;
+        reader.onload = (event) => {
+          backgroundImage = new Image();
+          backgroundImage.onload = () => {
+            // Wyczyść pola tekstowe po wgraniu tła
+            document.getElementById("namesInput").value = "";
+            document.getElementById("dateInput").value = "";
+            drawCanvas();
+          };
+          backgroundImage.src = event.target.result;
         };
         reader.readAsDataURL(file);
       }
+    });
+
+    // Obsługa logo
+    document.getElementById("logoUpload").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          logo = new Image();
+          logo.onload = drawCanvas;
+          logo.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Obsługa wpisywania tekstów
+    document.getElementById("namesInput").addEventListener("input", drawCanvas);
+    document.getElementById("dateInput").addEventListener("input", drawCanvas);
+
+    // Generowanie PDF
+    async function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: [75, 37.5]
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", 0, 0, 75, 37.5);
+
+      const note = document.getElementById("noteInput").value;
+      if (note.trim() !== "") {
+        pdf.setFontSize(10);
+        pdf.setTextColor(150);
+        pdf.text("Wiadomość dla sprzedawcy:", 5, 42);
+        pdf.text(note, 5, 46);
+      }
+
+      pdf.save("projekt-krowki.pdf");
     }
 
-    function downloadImage() {
-      const link = document.createElement("a");
-      link.download = "projekt-krowki.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    }
+    // Inicjalizacja pustego canvas
+    drawCanvas();
   </script>
 </body>
 </html>
