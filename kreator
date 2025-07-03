@@ -1,0 +1,82 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kreator Etykiety Krówki</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f8f8f8; margin: 0; padding: 20px; }
+    #canvasWrapper { position: relative; display: inline-block; }
+    canvas { border: 1px solid #ccc; }
+    .controls { margin-top: 10px; }
+    input[type="text"] { padding: 5px; margin: 5px; width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>Kreator etykiety krówki (75×37,5 mm)</h1>
+
+  <div id="canvasWrapper">
+    <canvas id="labelCanvas" width="885" height="443"></canvas>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="namesInput" placeholder="Imiona" />
+    <input type="text" id="dateInput" placeholder="Data" />
+    <input type="file" id="logoUpload" />
+    <br />
+    <button onclick="downloadImage()">Zamawiam z tym projektem</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("labelCanvas");
+    const ctx = canvas.getContext("2d");
+    const bg = new Image();
+    bg.src = "https://i.imgur.com/2IC3zH5.jpg"; // twoje tło 75x37,5mm w 300DPI
+
+    let logo = null;
+
+    bg.onload = () => drawCanvas();
+
+    document.getElementById("namesInput").addEventListener("input", drawCanvas);
+    document.getElementById("dateInput").addEventListener("input", drawCanvas);
+    document.getElementById("logoUpload").addEventListener("change", handleLogoUpload);
+
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#000";
+      ctx.font = "bold 36px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(document.getElementById("namesInput").value, canvas.width / 2, 230);
+
+      ctx.font = "28px Arial";
+      ctx.fillText(document.getElementById("dateInput").value, canvas.width / 2, 280);
+
+      if (logo) {
+        ctx.drawImage(logo, 670, 330, 180, 90);
+      }
+    }
+
+    function handleLogoUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          logo = new Image();
+          logo.onload = drawCanvas;
+          logo.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function downloadImage() {
+      const link = document.createElement("a");
+      link.download = "projekt-krowki.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  </script>
+</body>
+</html>
